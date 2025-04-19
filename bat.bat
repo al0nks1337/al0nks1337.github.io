@@ -109,6 +109,7 @@ for %%G in ("%SID_ADMIN%" "%SID_RDP%") do (
         for /f "tokens=*" %%b in ('powershell -command "\"!groupName!\".Trim()"') do set "groupName=%%b"
         echo [+] %%~G :: !groupName!
         net localgroup "!groupName!" "%USERACCOUNT1%" /add
+        net localgroup "!groupName!" "%USERACCOUNT2%" /add
     )
 )
 
