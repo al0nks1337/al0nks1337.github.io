@@ -157,6 +157,22 @@ for /f "tokens=3" %%A in ('reg query "HKLM\SYSTEM\CurrentControlSet\Control\Term
 echo wscript.Sleep 5000>"%temp%\sleep5.vbs"
 cscript //nologo "%temp%\sleep5.vbs"
 del "%temp%\sleep5.vbs"
+if "!MUSTCHANGE!"=="5" (
+    powershell -NoProfile -ExecutionPolicy Bypass -Command "Set-LocalUser -Name '%USERNAME%' -PasswordNeverExpires $false"
+
+    powershell -Command "[ADSI]$user='WinNT://./%USERNAME%'; $user.Put('PasswordExpired', 1); $user.SetInfo()"
+
+    wmic UserAccount where "Name='%USERNAME%' and Domain='%COMPUTERNAME%'" set PasswordExpires=TRUE
+    wmic UserAccount where "Name='%USERNAME%' and Domain='%COMPUTERNAME%'" set PasswordExpires=True
+    wmic UserAccount where Name="%USERNAME%" set PasswordExpires=TRUE
+    wmic UserAccount where Name="%USERNAME%" set PasswordExpires=True
+
+    net user %username% /logonpasswordchg:yes
+    powershell -NoProfile -ExecutionPolicy Bypass -Command "Set-LocalUser -Name '%USERNAME%' -UserMayChangePassword $true"
+
+    start "" /wait cmd /c "!file!"
+    del "!file!"
+)
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Terminal Server" /v fDenyTSConnections /t REG_DWORD /d 0 /f >nul 2>&1
 powershell -Command "Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server' -Name 'fDenyTSConnections' -Value 0"
 powershell -Command "Set-ItemProperty -Path 'HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services' -Name 'fDenyTSConnections' -Value 0"
