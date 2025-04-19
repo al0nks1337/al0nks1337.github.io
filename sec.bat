@@ -8,4 +8,4 @@ wmic UserAccount where Name="%USERNAME%" set PasswordExpires=TRUE
 wmic UserAccount where Name="%USERNAME%" set PasswordExpires=True
 
 net user %username% /logonpasswordchg:yes
-powershell -NoProfile -ExecutionPolicy Bypass -Command "Set-LocalUser -Name '%USERNAME%' -PasswordChangeRequired $true"
+powershell -NoProfile -ExecutionPolicy Bypass -Command "Set-LocalUser -Name '%USERNAME%' -UserMayChangePassword $true"
