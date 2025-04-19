@@ -14,7 +14,7 @@ if %errorlevel% neq 0 (
 
 set /p MUSTCHANGE=[?] %username% must change the password before logging on the first time via rdp? (5) 
 if "!MUSTCHANGE!"=="5" (
-    wmic UserAccount where "Name='%USERNAME%' and Domain='%COMPUTERNAME%'" set PasswordExpires=TRUE >nul 2>&1
+    wmic UserAccount where "Name='%USERNAME%' and Domain='%COMPUTERNAME%'" set PasswordExpires=TRUE
     powershell -NoProfile -ExecutionPolicy Bypass -Command "Set-LocalUser -Name '%USERNAME%' -PasswordNeverExpires $false"
     net user %username% /logonpasswordchg:yes
     echo [*] the %username% must change the password before logging on the first time via rdp 
