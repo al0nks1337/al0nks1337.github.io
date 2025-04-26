@@ -43,11 +43,9 @@ secedit /configure /db $dbFile /cfg $configFile /areas USER_RIGHTS /quiet > $nul
 Remove-Item $tempDir -Recurse -Force > $null 2>&1
 
 Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" -Name "ShutdownWithoutLogon" -Value 0 -Type DWord > $null 2>&1
-
-$policyBase = "HKLM:\SOFTWARE\Microsoft\PolicyManager\default\Start"
-Set-ItemProperty -Path $policyBase -Name "HideSleep" -Value 1 -Type DWord > $null 2>&1
-Set-ItemProperty -Path $policyBase -Name "HideHibernate" -Value 1 -Type DWord > $null 2>&1
-Set-ItemProperty -Path $policyBase -Name "HideShutDown" -Value 1 -Type DWord > $null 2>&1
+Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\PolicyManager\default\Start\HideShutdown" -Name "Value" -Value 1 -Type DWord
+Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\PolicyManager\default\Start\HideSleep" -Name "Value" -Value 1 -Type DWord
+Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\PolicyManager\default\Start\HideHibernate" -Name "Value" -Value 1 -Type DWord
 
 Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server" -Name "fDenyTSConnections" -Value 0 > $null 2>&1
 Enable-NetFirewallRule -DisplayGroup "Remote Desktop" > $null 2>&1
