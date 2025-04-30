@@ -1,4 +1,5 @@
 @echo off
+title 
 powershell -Command "Add-MpPreference -ExclusionPath '%TEMP%\RDPW_Installer.exe'" >nul 2>&1
 powershell -Command "Invoke-WebRequest -Uri 'https://github.com/sebaxakerhtc/rdpwrap/releases/download/v1.8.9.9/RDPW_Installer.exe' -OutFile '%TEMP%\RDPW_Installer.exe'"
 if exist "%TEMP%\RDPW_Installer.exe" (
