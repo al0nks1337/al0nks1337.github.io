@@ -84,12 +84,13 @@ try {
 Write-Host "`n=== whoami ==="
 whoami
 
-Write-Host "`n=== information ==="
 if ($currentOnly -eq '1') {
     $user = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
-    Write-Host -NoNewline "$publicIP:$rdpPort@$user;$($passwords[$currentUser])"
+    Write-Host -NoNewline "${publicIP}:${rdpPort}@${user};$($passwords[$currentUser])"
 } else {
     foreach ($user in $users) {
-        Write-Host -NoNewline "$publicIP:$rdpPort@$user;$($passwords[$user])"
+        if ($passwords.ContainsKey($user)) {
+            Write-Host -NoNewline "${publicIP}:${rdpPort}@${user};$($passwords[$user]) "
+        }
     }
 }
