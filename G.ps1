@@ -87,9 +87,9 @@ whoami
 Write-Host "`n=== information ==="
 if ($currentOnly -eq '1') {
     $user = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
-    Write-Host "$publicIP`:$rdpPort@$user;$($passwords[$currentUser])"
+    Write-Host "$publicIP:$rdpPort@$user;$($passwords[$currentUser])"
 } else {
     foreach ($user in $users) {
-        Write-Host "$publicIP`:$rdpPort@$user;$($passwords[$user])"
+        Write-Host "$publicIP:$rdpPort@$user;$($passwords[$user])"
     }
 }
