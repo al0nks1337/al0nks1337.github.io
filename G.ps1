@@ -2,6 +2,8 @@ Clear-Host
 
 $currentOnly = Read-Host "[!] are you need do this only current user? "
 
+Clear-Host
+
 Function Generate-Password($length = 30) {
     $lower = "abcdefghijklmnopqrstuvwxyz".ToCharArray()
     $upper = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".ToCharArray()
@@ -47,7 +49,7 @@ Get-NetIPAddress | Where-Object { $_.IPAddress -match '\d+\.\d+\.\d+\.\d+' } | F
 }
 
 try {
-    $publicIP = Invoke-RestMethod -Uri "http://ifconfig.me/ip" -TimeoutSec 5
+    $publicIP = (curl -4 icanhazip.com).Content.Trim()
 } catch {
     $publicIP = "Unknown"
 }
@@ -66,7 +68,7 @@ try {
         Write-Host "domain: $($compSys.Domain)"
         try {
             $domainComputers = Get-ADComputer -Filter * -Property Name | Select-Object -ExpandProperty Name
-            Write-Host "Computers in domain:"
+            Write-Host "computers in domain:"
             $domainComputers | ForEach-Object { Write-Host " - $_" }
         } catch {
             Write-Host "error get list of computers on domain"
@@ -77,6 +79,9 @@ try {
 } catch {
     Write-Host "could not determine domain or workgroup information"
 }
+
+Write-Host "`n=== whoami ==="
+whoami
 
 Write-Host "`n=== information ==="
 if ($currentOnly -eq '1') {
