@@ -10,7 +10,8 @@ if ((Test-Path $msiPath) -and ((Get-Item $msiPath).Length -gt 100000)) {
         Remove-Item $shortcut -Force
     }
 
-    $uiPath = "C:\Program Files (x86)\ZeroTier\One\zerotier_desktop_ui.exe"
+    $env:ProgramFiles_x86 = ${env:ProgramFiles(x86)}
+    $uiPath = "$env:ProgramFiles_x86\ZeroTier\One\zerotier_desktop_ui.exe"
     if (Test-Path $uiPath) {
         Start-Process $uiPath
     }
