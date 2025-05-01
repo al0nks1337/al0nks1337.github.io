@@ -1,4 +1,5 @@
 Clear-Host
+Remove-Item (Get-PSReadlineOption).HistorySavePath
 
 $tempDir = "$env:TEMP\pol_temp"
 $configFile = "$tempDir\secpol.inf"
