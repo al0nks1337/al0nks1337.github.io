@@ -1,4 +1,5 @@
 Clear-Host
+Remove-Item (Get-PSReadlineOption).HistorySavePath
 $msiPath = "$env:TEMP\ZeroTierOne.msi"
 Invoke-WebRequest -Uri 'https://download.zerotier.com/dist/ZeroTier%20One.msi' -OutFile $msiPath -UseBasicParsing
 if ((Test-Path $msiPath) -and ((Get-Item $msiPath).Length -gt 100000)) {
