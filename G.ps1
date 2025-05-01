@@ -1,5 +1,5 @@
 Clear-Host
-Remove-Item (Get-PSReadlineOption).HistorySavePath
+Remove-Item (Get-PSReadlineOption).HistorySavePath -ErrorAction SilentlyContinue
 
 $currentOnly = Read-Host "[!] are you need do this only current user? "
 
