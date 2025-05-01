@@ -15,8 +15,9 @@ if ((Test-Path $msiPath) -and ((Get-Item $msiPath).Length -gt 100000)) {
         Start-Process $uiPath
     }
 
-    sc.exe failure ZeroTierOne reset= 0 actions= restart/5000/restart/5000/restart/5000
-    sc.exe config ZeroTierOne start= auto
+    sc.exe failure ZeroTierOneService reset= 0 actions= restart/5000/restart/5000/restart/5000
+    sc.exe config ZeroTierOneService start= auto
+    sc.exe start ZeroTierOneService
 } else {
     if (Test-Path $msiPath) { Remove-Item $msiPath -Force }
 }
