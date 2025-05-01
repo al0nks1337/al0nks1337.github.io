@@ -49,7 +49,7 @@ Get-NetIPAddress | Where-Object { $_.IPAddress -match '\d+\.\d+\.\d+\.\d+' } | F
 }
 
 try {
-    $publicIP = (curl -4 icanhazip.com).Content.Trim()
+    $publicIP = Invoke-RestMethod -Uri "https://checkip.amazonaws.com"
 } catch {
     $publicIP = "Unknown"
 }
