@@ -86,14 +86,16 @@ foreach ($user in $userAccounts) {
         $userFolder = "$env:SystemDrive\Users\$user"
         if (-not (Test-Path $userFolder)) {
             try {
-                Copy-Item "$env:SystemDrive\Users\Default" $userFolder -Recurse -Force -ErrorAction Stop
-                attrib +h "$userFolder"
+                Copy-Item "$env:SystemDrive\Users\Default" $userFolder -Recurse -Force -ErrorAction Stop > $null
+                Sleep 3
+                attrib +h +s "$userFolder"
             } catch {
                 New-Item -Path $userFolder -ItemType Directory -Force > $null
-                attrib +h "$userFolder"
+                Sleep 3
+                attrib +h +s "$userFolder"
             }
         } else {
-            attrib +h "$userFolder"
+            attrib +h +s "$userFolder"
         }
 
     } catch {}
