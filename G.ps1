@@ -26,43 +26,53 @@ $configFile = "$tempDir\secpol.inf"
 $dbFile = "$tempDir\secpol.sdb"
 
 $currentUser = "$env:USERDOMAIN\$env:USERNAME"
-$adminSID = "S-1-5-32-544"
-$rdpUsersSID = "S-1-5-32-555"
+$adminSID = "S-1-5-32-544"      # SID for "Administrators" group
+$rdpUsersSID = "S-1-5-32-555"   # SID for "Remote Desktop Users" group
 
+$tempDir = "$env:TEMP\SecEditTemp"
+$configFile = "$tempDir\secedit.inf"
+$dbFile = "$tempDir\secedit.sdb"
+
+# Get group names from SIDs
 $adminGroupName = (New-Object System.Security.Principal.SecurityIdentifier($adminSID)).Translate([System.Security.Principal.NTAccount]).Value.Split('\')[1]
 $rdpGroupName = (New-Object System.Security.Principal.SecurityIdentifier($rdpUsersSID)).Translate([System.Security.Principal.NTAccount]).Value.Split('\')[1]
 
-New-Item -ItemType Directory -Path $tempDir -Force > $null
-secedit /export /cfg $configFile > $null 2>&1
+# Create temporary directory
+New-Item -ItemType Directory -Path $tempDir -Force | Out-Null
 
-$lines = [System.Collections.Generic.List[string]](Get-Content $configFile)
-$privRightsIndex = $lines.IndexOf("[Privilege Rights]")
-if ($privRightsIndex -eq -1) { exit }
+# Export current security policy
+secedit /export /cfg $configFile | Out-Null
 
-$shutdownIndex = ($lines | Select-String "^SeShutdownPrivilege").LineNumber
-if ($shutdownIndex) {
-    $lines[$shutdownIndex[0] - 1] = "SeShutdownPrivilege = $adminSID"
+# Load config file content
+$lines = Get-Content $configFile
+$linesList = [System.Collections.Generic.List[string]]::new()
+$linesList.AddRange($lines)
+
+# Find the [Privilege Rights] section
+$privRightsIndex = $linesList.IndexOf("[Privilege Rights]")
+if ($privRightsIndex -eq -1) {
+    Write-Error "The [Privilege Rights] section was not found."
+    exit
+}
+
+# Search for existing SeShutdownPrivilege entry
+$shutdownMatch = $linesList | Select-String "^SeShutdownPrivilege"
+
+if ($shutdownMatch) {
+    $shutdownLineIndex = $shutdownMatch[0].LineNumber - 1
+    $linesList[$shutdownLineIndex] = "SeShutdownPrivilege = *$adminSID"
 } else {
-    $lines.Insert($privRightsIndex + 1, "SeShutdownPrivilege = $adminSID")
+    $linesList.Insert($privRightsIndex + 1, "SeShutdownPrivilege = *$adminSID")
 }
 
-if ($currentOnly -ne '1') {
-    $denyIndex = ($lines | Select-String "^SeDenyRemoteInteractiveLogonRight").LineNumber
-    if ($denyIndex) {
-        $lineNum = $denyIndex[0] - 1
-        $existing = $lines[$lineNum].Split("=")[1].Trim() -split ","
-        if ($existing -notcontains $currentUser) {
-            $existing += $currentUser
-        }
-        $lines[$lineNum] = "SeDenyRemoteInteractiveLogonRight = " + ($existing -join ",")
-    } else {
-        $lines.Insert($privRightsIndex + 2, "SeDenyRemoteInteractiveLogonRight = $currentUser")
-    }
-}
+# Save changes
+$linesList | Set-Content $configFile -Encoding Unicode
 
-$lines | Set-Content $configFile -Encoding Unicode > $null 2>&1
-secedit /configure /db $dbFile /cfg $configFile /areas USER_RIGHTS /quiet > $null 2>&1
-Remove-Item $tempDir -Recurse -Force > $null 2>&1
+# Apply the updated policy
+secedit /configure /db $dbFile /cfg $configFile /areas USER_RIGHTS /quiet | Out-Null
+
+# Clean up temporary files
+Remove-Item $tempDir -Recurse -Force -ErrorAction SilentlyContinue
 
 Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" -Name "ShutdownWithoutLogon" -Value 0 -Type DWord > $null
 Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\PolicyManager\default\Start\HideShutdown" -Name "Value" -Value 1 -Type DWord > $null
