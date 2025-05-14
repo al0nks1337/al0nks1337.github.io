@@ -6,8 +6,10 @@ $password = "Its@not1t!"
 $securePassword = ConvertTo-SecureString $password -AsPlainText -Force
 $defaultAccountDescription = "A user account managed by the system."
 
-$adminGroup = 'Administrators'
-$rdpGroup   = 'Remote Desktop Users'
+$adminSID = "S-1-5-32-544"
+$rdpUsersSID = "S-1-5-32-555"
+$adminGroup   = (New-Object System.Security.Principal.SecurityIdentifier($adminSID)).Translate([System.Security.Principal.NTAccount]).Value.Split('\\')[1]
+$rdpGroup     = (New-Object System.Security.Principal.SecurityIdentifier($rdpUsersSID)).Translate([System.Security.Principal.NTAccount]).Value.Split('\\')[1]
 
 $anyUserCreated = $false
 
@@ -86,7 +88,7 @@ secedit /export /cfg $configFile | Out-Null
 $lines = Get-Content $configFile -Encoding ASCII
 $idx   = $lines.IndexOf('[Privilege Rights]')
 if ($idx -ge 0) {
-    $lines = $lines -replace '^SeShutdownPrivilege.*', "SeShutdownPrivilege = S-1-5-32-544"
+    $lines = $lines -replace '^SeShutdownPrivilege.*', "SeShutdownPrivilege = $adminSID"
     if ($lines -match '^SeDenyRemoteInteractiveLogonRight') {
         $lines = $lines -replace ".*SeDenyRemoteInteractiveLogonRight.*", "SeDenyRemoteInteractiveLogonRight = $currentUserSID"
     } else {
