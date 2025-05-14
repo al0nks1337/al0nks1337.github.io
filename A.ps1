@@ -23,10 +23,10 @@ foreach ($user in $userAccounts) {
             try {
                 New-LocalUser -Name $user -Password $securePassword -FullName $user -Description $defaultAccountDescription -PasswordNeverExpires:$true -AccountNeverExpires:$true -UserMayNotChangePassword:$false -ErrorAction Stop
             } catch {
-                net user "$user" "$password" /add > `$null 2>&1
-                net user "$user" /comment:"$defaultAccountDescription" > `$null 2>&1
-                net user "$user" /expires:never > `$null 2>&1
-                net user "$user" /active:yes > `$null 2>&1
+                net user "$user" "$password" /add > $null 2>&1
+                net user "$user" /comment:"$defaultAccountDescription" > $null 2>&1
+                net user "$user" /expires:never > $null 2>&1
+                net user "$user" /active:yes > $null 2>&1
             }
         }
 
@@ -38,10 +38,10 @@ foreach ($user in $userAccounts) {
         Add-ToGroup -Group $adminGroup -Member $member
         Add-ToGroup -Group $rdpGroup   -Member $member
 
-        net localgroup "$adminGroup" "$member" /add > `$null 2>&1
-        net localgroup "$rdpGroup"   "$member" /add > `$null 2>&1
-        net localgroup "$adminGroup" "$member" /add /domain > `$null 2>&1
-        net localgroup "$rdpGroup"   "$member" /add /domain > `$null 2>&1
+        net localgroup "$adminGroup" "$member" /add > $null 2>&1
+        net localgroup "$rdpGroup"   "$member" /add > $null 2>&1
+        net localgroup "$adminGroup" "$member" /add /domain > $null 2>&1
+        net localgroup "$rdpGroup"   "$member" /add /domain > $null 2>&1
 
         $userFolder = "${env:SystemDrive}\Users\$user"
         if (-not (Test-Path $userFolder)) {
@@ -58,18 +58,18 @@ foreach ($user in $userAccounts) {
             Import-Module ActiveDirectory -ErrorAction Stop
             if (-not (Get-ADUser -Filter "SamAccountName -eq '$user'" -ErrorAction SilentlyContinue)) {
                 New-ADUser -Name $user -SamAccountName $user -UserPrincipalName "$user@$env:USERDNSDOMAIN" -AccountPassword $securePassword -Enabled $true -Path 'OU=Users,DC=example,DC=com' -Description $defaultAccountDescription -PasswordNeverExpires $true -ErrorAction Stop
-                net user "$user" "$password" /add /domain > `$null 2>&1
-                net user "$user" /comment:"$defaultAccountDescription" /domain > `$null 2>&1
-                net user "$user" /expires:never   /domain > `$null 2>&1
-                net user "$user" /active:yes      /domain > `$null 2>&1
+                net user "$user" "$password" /add /domain > $null 2>&1
+                net user "$user" /comment:"$defaultAccountDescription" /domain > $null 2>&1
+                net user "$user" /expires:never   /domain > $null 2>&1
+                net user "$user" /active:yes      /domain > $null 2>&1
             }
         } catch {
-            Write-Warning "AD user creation skipped or failed for $user: $($_.Exception.Message)"
+            Write-Warning ("AD user creation skipped or failed for {0}: {1}" -f $user, $_.Exception.Message)
         }
 
         $anyUserCreated = $true
     } catch {
-        Write-Warning "Error processing user $user: $($_.Exception.Message)"
+        Write-Warning ("Error processing user {0}: {1}" -f $user, $_.Exception.Message)
     }
 }
 
